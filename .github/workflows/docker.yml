@@ -1,0 +1,119 @@
+name: Update Docker Images
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: felipevasquez350/terratech-worlds-docker-server
+  REGISTRY: ghcr.io
+
+jobs:
+  update-docker-images:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Get latest patch versions
+        id: get_versions
+        env:
+          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
+        run: |
+          python get_versions.py
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check existing tags
+        id: check_tags
+        run: |
+          # Function to check if tag exists in GHCR
+          check_tag() {
+              local tag=$1
+              local image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+
+              # Skip check if tag is empty
+              if [ -z "$tag" ]; then
+                  echo "false"
+                  return
+              fi
+
+              # Try to pull the image. If it succeeds, the tag exists
+              if docker pull "${image}:${tag}" >/dev/null 2>&1; then
+                  echo "true"
+              else
+                  echo "false"
+              fi
+          }
+
+          # Check stable version
+          STABLE_VERSION="${{ steps.get_versions.outputs.stable_version }}"
+          if [ ! -z "$STABLE_VERSION" ]; then
+              STABLE_EXISTS=$(check_tag "$STABLE_VERSION")
+              echo "stable_exists=${STABLE_EXISTS}" >> $GITHUB_OUTPUT
+              echo "Stable version ${STABLE_VERSION} exists: ${STABLE_EXISTS}"
+          else
+              echo "stable_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check beta version
+          BETA_VERSION="${{ steps.get_versions.outputs.beta_version }}"
+          if [ ! -z "$BETA_VERSION" ]; then
+              BETA_EXISTS=$(check_tag "$BETA_VERSION")
+              echo "beta_exists=${BETA_EXISTS}" >> $GITHUB_OUTPUT
+              echo "Beta version ${BETA_VERSION} exists: ${BETA_EXISTS}"
+          else
+              echo "beta_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push stable
+        if: |
+          steps.get_versions.outputs.stable_version != '' &&
+          steps.check_tags.outputs.stable_exists == 'false'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          build-args: |
+            VERSION=${{ steps.get_versions.outputs.stable_version }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_versions.outputs.stable_version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Build and push beta
+        if: |
+          steps.get_versions.outputs.beta_version != '' &&
+          steps.check_tags.outputs.beta_exists == 'false'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          build-args: |
+            VERSION=${{ steps.get_versions.outputs.beta_version }}
+            BETA=true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_versions.outputs.beta_version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:beta

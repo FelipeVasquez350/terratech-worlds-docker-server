@@ -1,0 +1,10 @@
+services:
+  terratech-server:
+    image: ghcr.io/felipevasquez350/terratech-worlds-docker-server:stable
+    ports:
+      - "7777:7777/udp"
+    volumes:
+      - ./data/terratech-worlds-save:/serverdata/serverfiles/TT2/Saved
+      - ./data/config/dedicated_server_config.json:/serverdata/serverfiles/dedicated_server_config.json:ro
+      - ./data/wine64:/serverdata/wine64
+    restart: unless-stopped

@@ -1,0 +1,4 @@
+data/terratech-worlds-save/*
+data/wine64/*
+.env
+venv

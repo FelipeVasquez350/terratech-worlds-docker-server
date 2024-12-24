@@ -1,0 +1,30 @@
+{
+  "Port": 7777,
+  "SlotCount": 6,
+  "Password": "",
+  "MaxBackupCount": 25,
+  "BackupInterval": 3600,
+  "ReplacePlanetSettings": true,
+  "PlanetSettings": {
+    "IsCustomised": true,
+    "Details": {
+      "DayLength": "1200",
+      "WeatherEvents": "1",
+      "HazardTargetingMode": "1",
+      "ResourceToughness": "1",
+      "ResourceYield": "1",
+      "EnemyDangerLevel": "1",
+      "EnemyRespawnRate": "1",
+      "EnemyBlockDropRate": "1",
+      "StructurePowerGeneration": "1",
+      "PlayerTechPowerRegen": "1",
+      "PlayerTechAutoRepair": "1",
+      "PlayerTechRepairCharges": "3",
+      "PlayerTechLimit": "1",
+      "PlayerUnlimitedAmmo": false,
+      "PlayerUnlimitedBoosterFuel": false,
+      "PlayerUnlimitedOtherConsumables": false,
+      "PlayerTechyardStorage": "1"
+    }
+  }
+}
