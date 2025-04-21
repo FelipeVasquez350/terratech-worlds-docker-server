@@ -1,6 +1,19 @@
 services:
+  terratech-server-permissions:
+    build:
+      context: .
+      dockerfile: permissions.Dockerfile
+    volumes:
+      - ./data/terratech-worlds-save:/data/serverfiles/TT2/Saved
+      - ./data/config/dedicated_server_config.json:/config_source/dedicated_server_config.json:ro
+      - ./data/wine64:/data/wine64
+    environment:
+      - TARGET_UID=1000
+      - TARGET_GID=1000
+    restart: "no" # This service should only run once
+
   terratech-server:
-    image: ghcr.io/felipevasquez350/terratech-worlds-docker-server:stable
+    image: ghcr.io/felipevasquez350/terratech-worlds-docker-server:0.6.2
     ports:
       - "7777:7777/udp"
     volumes:
@@ -8,3 +21,6 @@ services:
       - ./data/config/dedicated_server_config.json:/serverdata/serverfiles/dedicated_server_config.json:ro
       - ./data/wine64:/serverdata/wine64
     restart: unless-stopped
+    depends_on:
+      terratech-server-permissions:
+        condition: service_completed_successfully # Wait for the permissions service to finish

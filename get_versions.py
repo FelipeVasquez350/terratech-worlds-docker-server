@@ -29,27 +29,39 @@ def get_all_news(app_id, count=100, maxlength=300):
 
 def parse_patch_notes(news_items):
   latest = {'stable': None, 'beta': None}
-  patterns = {
-    'stable': re.compile(r'^Patch notes for Update\s+([\d.]+)', re.IGNORECASE),
-    'beta': re.compile(r'^Patch Notes for unstable update\s+([\w.-]+)', re.IGNORECASE)
-  }
+  # Updated pattern: requires hyphen immediately after digits for beta versions
+  version_pattern = re.compile(r'(\d+\.\d+\.\d+)(-[\w.-]+)?', re.IGNORECASE)
 
   for item in news_items:
     title = item.get('title', '').strip()
     date_unix = item.get('date', 0)
 
-    for branch, pattern in patterns.items():
-      match = pattern.match(title)
-      if match:
-        version = match.group(1)
-        if (
-          latest[branch] is None or
-          date_unix > latest[branch]['date_unix']
-        ):
-          latest[branch] = {
-            'version': version,
-            'date_unix': date_unix
-          }
+    # Search for the version pattern anywhere in the title
+    match = version_pattern.search(title)
+    if match:
+      base_version = match.group(1) # e.g., "0.6.2"
+      beta_suffix = match.group(2) # e.g., "-unstable" or None
+
+      if beta_suffix:
+        # It's a beta version
+        branch = 'beta'
+        # Combine base version and suffix for the full version string
+        full_version = base_version + beta_suffix
+      else:
+        # It's a stable version
+        branch = 'stable'
+        full_version = base_version
+
+      # Update the latest version for the detected branch if this one is newer
+      if (
+        latest[branch] is None or
+        date_unix > latest[branch]['date_unix']
+      ):
+        latest[branch] = {
+          'version': full_version,
+          'date_unix': date_unix
+        }
+
   return latest
 
 def set_output(name, value):
